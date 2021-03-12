@@ -94,7 +94,12 @@ int main(void)
   MX_TIM2_Init();
   /* USER CODE BEGIN 2 */
 
+  //Start the TIM2 (Interrupts) with max prescaler 35636-1 and 122 counter to get approx 1 sec
   HAL_TIM_Base_Start_IT(&htim2);
+
+
+  //Use the callback
+//  HAL_I2C_MasterTxCpltCallback
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -250,13 +255,44 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+
+// Toggle LED PC13 integrated in the Bluepill approx every 1 sec
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 {
 	if(htim == &htim2)
 	{
-		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+//		HAL_GPIO_TogglePin(GPIOC, GPIO_PIN_13);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_SET);
+		//Start I2C1 with interrupts
+		// IK, 7b addr, 1b w/r
+		uint8_t dev_addr = (0x40<<1)|0x00; // Write
+		uint8_t led0_ON_L_addr = 0x06;
+		uint8_t led0_ON_H_addr = 0x07;
+		uint8_t led0_OFF_L_addr = 0x08;
+		uint8_t led0_OFF_H_addr = 0x09;
+
+		uint8_t led0_ON_H_dc = 0x01;
+		uint8_t led0_ON_L_dc = 0x99;
+		uint8_t led0_OFF_H_dc = 0x04;
+		uint8_t led0_OFF_L_dc = 0xCC;
+
+		uint8_t i2c_buff[] = {
+				led0_ON_L_addr, led0_ON_L_dc, led0_ON_H_addr, led0_ON_H_dc,
+				led0_OFF_L_addr, led0_OFF_L_dc, led0_OFF_H_addr, led0_OFF_H_dc
+		};
+
+		HAL_I2C_Master_Transmit_IT(&hi2c1,dev_addr, i2c_buff, 2);
+		HAL_GPIO_WritePin(GPIOC, GPIO_PIN_13, GPIO_PIN_RESET);
 	}
 }
+
+//void HAL_I2C_MasterTxCpltCallback(I2C_HandleTypeDef *hi2c)
+//{
+//	if(hi2c == &hi2c1)
+//	{
+//
+//	}
+//}
 
 
 /* USER CODE END 4 */
